@@ -3,80 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Журнал Дисциплины (SQL)</title>
+    <title>Журнал Дисциплины</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
-        .loader {
-            border-top-color: #10B981;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        .view { display: none; }
-        .view.active { display: block; }
+        .loader { border-top-color: #10B981; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        /* Стили для модального окна */
+        #login-modal-backdrop.hidden { display: none; }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
 
-    <div id="loading-view" class="view active fixed inset-0 flex items-center justify-center bg-white z-50">
-        <div class="loader h-12 w-12 rounded-full border-4 border-t-4 border-gray-200"></div>
-    </div>
-    
-    <div id="error-view" class="view min-h-screen flex items-center justify-center">
-        <div class="w-full max-w-md">
-             <div class="bg-white rounded-xl shadow-lg p-8 text-center">
-                <h2 class="text-2xl font-bold text-red-600 mb-4">Ошибка Подключения</h2>
-                <p class="text-gray-700" id="error-message">Не удалось подключиться к базе данных. Пожалуйста, проверьте инструкцию и убедитесь, что ваш проект Supabase активен.</p>
-            </div>
+    <!-- МОДАЛЬНОЕ ОКНО ДЛЯ ВХОДА (по умолчанию скрыто) -->
+    <div id="login-modal-backdrop" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div id="login-modal" class="bg-white rounded-xl shadow-lg p-8 w-full max-w-md">
+            <h2 class="text-2xl font-bold text-center mb-6">Вход в журнал</h2>
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Имя пользователя</label>
+                    <input type="text" id="username" name="username" required autocomplete="username" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
+                </div>
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Пароль</label>
+                    <input type="password" id="password" name="password" required autocomplete="current-password" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
+                </div>
+                <button type="submit" id="login-submit-button" class="w-full flex justify-center items-center bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-md transition duration-300">
+                    Войти
+                </button>
+            </form>
+            <div id="auth-message" class="mt-4 text-center text-red-600 h-5"></div>
+            <button id="close-modal-button" class="mt-4 w-full text-center text-gray-500 hover:text-gray-700">Отмена</button>
         </div>
     </div>
 
-    <!-- ЭКРАН ВХОДА -->
-    <div id="auth-view" class="view min-h-screen flex items-center justify-center">
-        <div class="w-full max-w-md">
-            <div class="bg-white rounded-xl shadow-lg p-8">
-                <h2 class="text-2xl font-bold text-center mb-6">Вход в журнал</h2>
-                
-                <form id="login-form" class="space-y-4">
-                    <div>
-                        <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Имя пользователя</label>
-                        <input type="text" id="username" name="username" required autocomplete="username" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
-                    </div>
-                    <div>
-                        <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Пароль</label>
-                        <input type="password" id="password" name="password" required autocomplete="current-password" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500">
-                    </div>
-                    <button type="submit" id="login-button" class="w-full flex justify-center items-center bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-md transition duration-300">
-                        Войти
-                    </button>
-                </form>
-                
-                <div id="auth-message" class="mt-4 text-center text-red-600 h-5"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ЭКРАН ПРИЛОЖЕНИЯ (ЖУРНАЛ) -->
-    <div id="app-view" class="view container mx-auto p-4 sm:p-6 max-w-4xl">
+    <!-- ОСНОВНАЯ СТРАНИЦА -->
+    <div class="container mx-auto p-4 sm:p-6 max-w-4xl">
          <header class="flex justify-between items-center my-6">
             <div>
                 <h1 class="text-3xl sm:text-4xl font-bold text-gray-900">Журнал Дисциплины</h1>
-                <p id="user-info" class="text-gray-600 mt-1"></p>
+                <p class="text-gray-600 mt-1">Работает на базе данных SQL</p>
             </div>
-            <button id="logout-button" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition">Выйти</button>
+            <!-- Этот блок будет меняться в зависимости от статуса входа -->
+            <div id="user-status-container">
+                <!-- Загрузчик статуса -->
+                <div id="user-status-loader" class="h-8 w-20 bg-gray-200 rounded-md animate-pulse"></div>
+                <!-- Кнопка "Войти" (для гостей) -->
+                <button id="show-login-button" class="hidden px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-md transition">Войти</button>
+                <!-- Информация о пользователе (для вошедших) -->
+                <div id="user-info-container" class="hidden flex items-center gap-4">
+                    <span id="user-info" class="text-gray-700"></span>
+                    <button id="logout-button" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition">Выйти</button>
+                </div>
+            </div>
         </header>
 
         <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
-            <h2 class="text-2xl font-semibold mb-4">Добавить новую запись</h2>
+            <h2 class="text-2xl font-semibold mb-2">Добавить новую запись</h2>
+            <p id="add-form-login-prompt" class="text-sm text-gray-500 mb-4 hidden">Нужно <a href="#" class="text-emerald-600 font-semibold" id="login-prompt-link">войти в систему</a>, чтобы добавлять записи.</p>
             <form id="add-record-form" class="space-y-4">
-                <input type="text" id="student" name="student" required placeholder="Ученик" class="w-full px-3 py-2 border border-gray-300 rounded-md">
-                <input type="text" id="lesson" name="lesson" required placeholder="Урок" class="w-full px-3 py-2 border border-gray-300 rounded-md">
-                <textarea id="violation" name="violation" rows="3" required placeholder="Действие/Нарушение" class="w-full px-3 py-2 border border-gray-300 rounded-md"></textarea>
-                <button type="submit" id="submit-button" class="w-full flex justify-center items-center bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-md">
+                <input type="text" id="student" name="student" required placeholder="Ученик" class="w-full px-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-100">
+                <input type="text" id="lesson" name="lesson" required placeholder="Урок" class="w-full px-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-100">
+                <textarea id="violation" name="violation" rows="3" required placeholder="Действие/Нарушение" class="w-full px-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-100"></textarea>
+                <button type="submit" id="submit-button" class="w-full flex justify-center items-center bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-md transition disabled:bg-gray-400 disabled:cursor-not-allowed">
                     <span>Добавить запись</span>
                 </button>
             </form>
@@ -93,10 +84,12 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Урок</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Нарушение</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Дата</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Действия</th>
+                            <th id="actions-header" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Действия</th>
                         </tr>
                     </thead>
-                    <tbody id="records-table-body" class="divide-y divide-gray-200"></tbody>
+                    <tbody id="records-table-body" class="divide-y divide-gray-200">
+                        <tr><td colspan="5" class="p-6 text-center"><div class="loader h-8 w-8 mx-auto rounded-full border-4 border-t-4 border-gray-200"></div></td></tr>
+                    </tbody>
                 </table>
             </div>
         </div>
@@ -106,65 +99,106 @@
         document.addEventListener('DOMContentLoaded', () => {
             const SUPABASE_URL = 'https://lcjgfxrfhhzncgpjlyzj.supabase.co';
             const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxjamdmeHJmaGh6bmNncGpseXpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5NDA3NjQsImV4cCI6MjA3MzUxNjc2NH0.IOsgSpZsb6oziniW8ywRYWIrLoptXitgjF88JwF6rBM';
-
-            const views = { loading: document.getElementById('loading-view'), auth: document.getElementById('auth-view'), app: document.getElementById('app-view'), error: document.getElementById('error-view') };
-            
-            function showView(viewName) {
-                Object.values(views).forEach(v => v.classList.remove('active'));
-                if (views[viewName]) views[viewName].classList.add('active');
-            }
             
             const { createClient } = supabase;
             const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+            // ... DOM элементы ...
+            const userStatusLoader = document.getElementById('user-status-loader');
+            const showLoginButton = document.getElementById('show-login-button');
+            const userInfoContainer = document.getElementById('user-info-container');
+            const userInfo = document.getElementById('user-info');
+            const logoutButton = document.getElementById('logout-button');
+            
+            const addRecordForm = document.getElementById('add-record-form');
+            const formInputs = addRecordForm.querySelectorAll('input, textarea');
+            const submitButton = document.getElementById('submit-button');
+            const addFormLoginPrompt = document.getElementById('add-form-login-prompt');
+            const loginPromptLink = document.getElementById('login-prompt-link');
+            
+            const tableBody = document.getElementById('records-table-body');
+            const actionsHeader = document.getElementById('actions-header');
+
+            const loginModalBackdrop = document.getElementById('login-modal-backdrop');
             const loginForm = document.getElementById('login-form');
             const authMessage = document.getElementById('auth-message');
-            const logoutButton = document.getElementById('logout-button');
-            const userInfo = document.getElementById('user-info');
-            const addRecordForm = document.getElementById('add-record-form');
-            const tableBody = document.getElementById('records-table-body');
-            const formMessage = document.getElementById('form-message');
+            const closeModalButton = document.getElementById('close-modal-button');
 
-            async function fetchRecords() {
-                // ... (код без изменений)
+            // --- Управление UI ---
+            async function updateUI(user) {
+                userStatusLoader.classList.add('hidden');
+                
+                if (user) {
+                    // Пользователь вошел
+                    const username = await getUsername(user.id);
+                    userInfo.textContent = username || 'Пользователь';
+                    userInfoContainer.classList.remove('hidden');
+                    showLoginButton.classList.add('hidden');
+
+                    formInputs.forEach(input => input.disabled = false);
+                    submitButton.disabled = false;
+                    addFormLoginPrompt.classList.add('hidden');
+                    actionsHeader.classList.remove('hidden');
+                } else {
+                    // Гость
+                    userInfoContainer.classList.add('hidden');
+                    showLoginButton.classList.remove('hidden');
+
+                    formInputs.forEach(input => input.disabled = true);
+                    submitButton.disabled = true;
+                    addFormLoginPrompt.classList.remove('hidden');
+                    actionsHeader.classList.add('hidden');
+                }
+                await fetchRecords(user); // Перерисовываем таблицу с учетом прав
+            }
+
+            // --- Получение данных ---
+            async function fetchRecords(user) {
+                const { data: records, error } = await db.from('violations').select('*').order('created_at', { ascending: false });
+                if (error) {
+                    tableBody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-red-500">Ошибка: ${error.message}</td></tr>`;
+                    return;
+                }
+                if (records.length === 0) {
+                     tableBody.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-gray-500">Записей пока нет.</td></tr>';
+                } else {
+                    tableBody.innerHTML = records.map(record => {
+                        const formattedDate = new Date(record.created_at).toLocaleString('ru-RU');
+                        const deleteButtonHTML = user ? `<button data-id="${record.id}" class="delete-btn text-red-600 hover:text-red-800">Удалить</button>` : '';
+                        return `
+                            <tr>
+                                <td class="px-6 py-4">${record.student}</td>
+                                <td class="px-6 py-4">${record.lesson}</td>
+                                <td class="px-6 py-4">${record.violation}</td>
+                                <td class="px-6 py-4">${formattedDate}</td>
+                                <td class="px-6 py-4">${deleteButtonHTML}</td>
+                            </tr>`;
+                    }).join('');
+                }
             }
 
             async function getUsername(userId) {
-                // ... (код без изменений)
+                if (!userId) return null;
+                const { data } = await db.from('profiles').select('username').eq('id', userId).single();
+                return data ? data.username : null;
             }
 
-            async function handleSession(session) {
-                if (session) {
-                    const username = await getUsername(session.user.id);
-                    userInfo.textContent = `Вы вошли как: ${username || 'Пользователь'}`;
-                    await fetchRecords();
-                    showView('app');
-                } else {
-                    showView('auth');
-                }
-            }
-            
-            // НОВЫЙ НАДЕЖНЫЙ КОД ЗАГРУЗКИ
-            const loadingTimeout = setTimeout(() => {
-                showView('error');
-            }, 7000); // 7 секунд
-
-            db.auth.getSession()
-                .then(({ data: { session } }) => {
-                    clearTimeout(loadingTimeout);
-                    handleSession(session);
-                })
-                .catch(err => {
-                    clearTimeout(loadingTimeout);
-                    document.getElementById('error-message').textContent = `Критическая ошибка: ${err.message}`;
-                    showView('error');
-                });
-
+            // --- Логика аутентификации ---
             db.auth.onAuthStateChange((_event, session) => {
-                handleSession(session);
+                updateUI(session?.user);
             });
 
-            // ... (остальной код для login, logout, add, delete без изменений)
+            // --- Модальное окно ---
+            function showLoginModal() { loginModalBackdrop.classList.remove('hidden'); }
+            function hideLoginModal() { loginModalBackdrop.classList.add('hidden'); authMessage.textContent = ''; loginForm.reset(); }
+            showLoginButton.addEventListener('click', showLoginModal);
+            loginPromptLink.addEventListener('click', showLoginModal);
+            closeModalButton.addEventListener('click', hideLoginModal);
+            loginModalBackdrop.addEventListener('click', (e) => {
+                if (e.target === loginModalBackdrop) hideLoginModal();
+            });
+
+            // ... Остальные обработчики событий (login, logout, add, delete) без изменений ...
             loginForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const username = e.target.username.value;
@@ -172,16 +206,14 @@
                 authMessage.textContent = '';
                 
                 const { data: email, error: rpcError } = await db.rpc('get_email_by_username', { p_username: username });
-
                 if (rpcError || !email) {
-                    authMessage.textContent = 'Пользователь с таким именем не найден.';
-                    return;
+                    authMessage.textContent = 'Пользователь не найден.'; return;
                 }
-
-                const { error: signInError } = await db.auth.signInWithPassword({ email: email, password: password });
-
+                const { error: signInError } = await db.auth.signInWithPassword({ email, password });
                 if (signInError) {
                     authMessage.textContent = 'Неверный пароль.';
+                } else {
+                    hideLoginModal();
                 }
             });
 
@@ -190,30 +222,30 @@
             addRecordForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const recordData = { student: e.target.student.value, lesson: e.target.lesson.value, violation: e.target.violation.value };
+                const { data: { user } } = await db.auth.getUser();
+                if (!user) { alert('Ошибка: вы не авторизованы.'); return; }
                 const { error } = await db.from('violations').insert([recordData]);
-                formMessage.textContent = '';
+                
                 if (error) {
-                    formMessage.textContent = `Ошибка: ${error.message}`;
-                    formMessage.className = 'mt-4 text-center text-red-600 h-5';
+                    alert(`Ошибка: ${error.message}`);
                 } else {
                     addRecordForm.reset();
-                    formMessage.textContent = 'Запись добавлена!';
-                    formMessage.className = 'mt-4 text-center text-green-600 h-5';
-                    await fetchRecords();
+                    await fetchRecords(user);
                 }
-                 setTimeout(() => formMessage.textContent = '', 3000);
             });
 
             tableBody.addEventListener('click', async (e) => {
                 if (e.target.classList.contains('delete-btn')) {
                     const id = e.target.dataset.id;
                     if (confirm('Удалить запись?')) {
+                        const { data: { user } } = await db.auth.getUser();
                         const { error } = await db.from('violations').delete().match({ id });
                         if (error) alert(`Ошибка: ${error.message}`);
-                        else await fetchRecords();
+                        else await fetchRecords(user);
                     }
                 }
             });
+
         });
     </script>
 </body>
