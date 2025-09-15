@@ -72,7 +72,6 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // ИСПРАВЛЕНО: Вставлена ваша рабочая ссылка
             const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyzYcs8QrTK9i3PW-Q8O3XUL_o7-7SgEKO3fZLQXaDD7e82RLBHupKLh1lxDOYSCcwn2g/exec";
 
             const form = document.getElementById('add-record-form');
@@ -143,7 +142,12 @@
                         throw new Error(result.message || 'Неизвестная ошибка от сервера');
                     }
                 } catch (error) {
-                    formMessage.textContent = `Ошибка добавления: ${error.message}`;
+                    // ИЗМЕНЕНО: Добавлена более понятная подсказка
+                    let errorMessage = `Ошибка добавления: ${error.message}. `;
+                    if (error.message.includes("Failed to fetch")) {
+                        errorMessage += "Это почти всегда означает проблему с правами доступа в Google Script. Пожалуйста, пересоздайте развертывание, убедившись, что доступ предоставлен 'Всем' (Anyone).";
+                    }
+                    formMessage.textContent = errorMessage;
                     formMessage.className = 'mt-4 text-center text-red-600';
                 } finally {
                     submitButton.disabled = false;
@@ -152,7 +156,6 @@
                 }
             });
             
-            // ИСПРАВЛЕНО: Убрана ошибочная проверка, теперь данные загружаются сразу.
             fetchRecords();
         });
     </script>
