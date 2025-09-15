@@ -72,7 +72,7 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // ВАЖНО: Вставьте сюда вашу САМУЮ НОВУЮ ссылку из Шага 2
+            // ИСПРАВЛЕНО: Вставлена ваша рабочая ссылка
             const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyzYcs8QrTK9i3PW-Q8O3XUL_o7-7SgEKO3fZLQXaDD7e82RLBHupKLh1lxDOYSCcwn2g/exec";
 
             const form = document.getElementById('add-record-form');
@@ -119,7 +119,6 @@
                 submitButtonLoader.classList.remove('hidden');
                 formMessage.textContent = '';
 
-                // ИСПРАВЛЕНО: Собираем данные в объект и отправляем как JSON
                 const recordData = {
                     student: form.elements.student.value,
                     lesson: form.elements.lesson.value,
@@ -152,12 +151,9 @@
                     submitButtonLoader.classList.add('hidden');
                 }
             });
-
-            if (SCRIPT_URL.includes("https://script.google.com/macros/s/AKfycbyzYcs8QrTK9i3PW-Q8O3XUL_o7-7SgEKO3fZLQXaDD7e82RLBHupKLh1lxDOYSCcwn2g/exec")) {
-                 tableBody.innerHTML = `<tr><td colspan="4" class="text-center p-6 text-red-500">Ошибка: Вставьте вашу новую ссылку на веб-приложение Google в HTML-файл.</td></tr>`;
-            } else {
-                fetchRecords();
-            }
+            
+            // ИСПРАВЛЕНО: Убрана ошибочная проверка, теперь данные загружаются сразу.
+            fetchRecords();
         });
     </script>
 </body>
