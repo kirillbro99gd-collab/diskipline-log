@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -72,7 +72,8 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyzYcs8QrTK9i3PW-Q8O3XUL_o7-7SgEKO3fZLQXaDD7e82RLBHupKLh1lxDOYSCcwn2g/exec";
+            // Вставьте сюда вашу САМУЮ ПОСЛЕДНЮЮ ссылку
+            const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzAelQ_Kg3hFjIKbhrsL-zHT3yyQfWcRf5f6l5TV5urNOAiOPW-HL8ywXOO-nYUC5X_ig/exec";
 
             const form = document.getElementById('add-record-form');
             const tableBody = document.getElementById('records-table-body');
@@ -125,12 +126,18 @@
                 };
 
                 try {
+                    // ИСПРАВЛЕНО: Возвращен стандартный метод отправки JSON
                     const response = await fetch(SCRIPT_URL, {
                         method: 'POST',
                         body: JSON.stringify(recordData),
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        // Добавлен mode: 'no-cors' - это может быть излишним, но помогает в сложных случаях
+                        // mode: 'no-cors' // <-- Закомментировано, так как скрипт теперь отвечает правильно
                     });
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    
+                    // Поскольку скрипт теперь всегда возвращает JSON, мы можем его прочитать
                     const result = await response.json();
 
                     if (result.status === 'success') {
@@ -142,11 +149,7 @@
                         throw new Error(result.message || 'Неизвестная ошибка от сервера');
                     }
                 } catch (error) {
-                    // ИЗМЕНЕНО: Добавлена более понятная подсказка
-                    let errorMessage = `Ошибка добавления: ${error.message}. `;
-                    if (error.message.includes("Failed to fetch")) {
-                        errorMessage += "Это почти всегда означает проблему с правами доступа в Google Script. Пожалуйста, пересоздайте развертывание, убедившись, что доступ предоставлен 'Всем' (Anyone).";
-                    }
+                    let errorMessage = `Ошибка добавления: ${error.message}.`;
                     formMessage.textContent = errorMessage;
                     formMessage.className = 'mt-4 text-center text-red-600';
                 } finally {
@@ -161,3 +164,4 @@
     </script>
 </body>
 </html>
+
