@@ -25,7 +25,6 @@
             <p class="text-gray-600 mt-2">Интерактивный журнал на базе Google Sheets</p>
         </header>
 
-        <!-- Форма добавления записи -->
         <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
             <h2 class="text-2xl font-semibold mb-4">Добавить новую запись</h2>
             <form id="add-record-form" class="space-y-4">
@@ -49,7 +48,6 @@
             <div id="form-message" class="mt-4 text-center"></div>
         </div>
 
-        <!-- Таблица для отображения данных -->
         <div class="bg-white rounded-xl shadow-lg p-6">
             <h2 class="text-2xl font-semibold mb-4">Список записей</h2>
             <div class="overflow-x-auto">
@@ -64,9 +62,7 @@
                     </thead>
                     <tbody id="records-table-body" class="divide-y divide-gray-200">
                         <tr>
-                            <td colspan="4" class="text-center p-6 text-gray-500" id="loading-row">
-                                Загрузка данных...
-                            </td>
+                            <td colspan="4" class="text-center p-6 text-gray-500" id="loading-row">Загрузка данных...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -76,39 +72,42 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Ваша ссылка была вставлена сюда
-            const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby2rXiQC8FGeTw3VtnQMTq5pG6TjwBnFbVaGiASo8_vNL32ZdEb8ESGhOFJcuxoSY63ag/exec";
+            // ВАЖНО: Вставьте сюда вашу САМУЮ НОВУЮ ссылку из Шага 2
+            const SCRIPT_URL = "ВАША_САМАЯ_НОВАЯ_ССЫЛКА_НА_ВЕБ_ПРИЛОЖЕНИЕ_GOOGLE";
 
             const form = document.getElementById('add-record-form');
             const tableBody = document.getElementById('records-table-body');
-            const loadingRow = document.getElementById('loading-row');
+            const formMessage = document.getElementById('form-message');
             const submitButton = document.getElementById('submit-button');
             const submitButtonText = document.getElementById('submit-button-text');
             const submitButtonLoader = document.getElementById('submit-button-loader');
-            const formMessage = document.getElementById('form-message');
             
             async function fetchRecords() {
                 try {
                     const response = await fetch(SCRIPT_URL);
-                    const data = await response.json();
-                    
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    const result = await response.json();
+
+                    if (result.status !== 'success') throw new Error(result.message);
+
+                    const records = result.data;
                     tableBody.innerHTML = '';
-                    if (data.length === 0) {
+                    if (records.length === 0) {
                         tableBody.innerHTML = '<tr><td colspan="4" class="text-center p-6 text-gray-500">Записей пока нет.</td></tr>';
                     } else {
-                        data.reverse().forEach(record => { // reverse() чтобы новые были сверху
+                        records.reverse().forEach(record => {
                             const tr = document.createElement('tr');
                             tr.innerHTML = `
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${record.student}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${record.lesson}</td>
-                                <td class="px-6 py-4 whitespace-normal text-sm text-gray-500 break-words">${record.violation}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${record.timestamp}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${record.student || ''}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${record.lesson || ''}</td>
+                                <td class="px-6 py-4 whitespace-normal text-sm text-gray-500 break-words">${record.violation || ''}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${record.timestamp || ''}</td>
                             `;
                             tableBody.appendChild(tr);
                         });
                     }
                 } catch (error) {
-                    loadingRow.parentElement.innerHTML = `<tr><td colspan="4" class="text-center p-6 text-red-500">Ошибка загрузки данных: ${error.message}. Проверьте SCRIPT_URL в коде.</td></tr>`;
+                    tableBody.innerHTML = `<tr><td colspan="4" class="text-center p-6 text-red-500">Ошибка загрузки: ${error.message}</td></tr>`;
                 }
             }
 
@@ -120,31 +119,32 @@
                 submitButtonLoader.classList.remove('hidden');
                 formMessage.textContent = '';
 
-                const formData = new FormData(form);
+                // ИСПРАВЛЕНО: Собираем данные в объект и отправляем как JSON
                 const recordData = {
-                    student: formData.get('student'),
-                    lesson: formData.get('lesson'),
-                    violation: formData.get('violation')
+                    student: form.elements.student.value,
+                    lesson: form.elements.lesson.value,
+                    violation: form.elements.violation.value,
                 };
 
                 try {
                     const response = await fetch(SCRIPT_URL, {
                         method: 'POST',
                         body: JSON.stringify(recordData),
-                        headers: { 'Content-Type': 'application/json' }
+                        headers: { 'Content-Type': 'application/json' },
                     });
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                     const result = await response.json();
 
                     if (result.status === 'success') {
                         form.reset();
                         formMessage.textContent = 'Запись успешно добавлена!';
                         formMessage.className = 'mt-4 text-center text-green-600';
-                        fetchRecords();
+                        await fetchRecords();
                     } else {
-                        throw new Error(result.message || 'Неизвестная ошибка');
+                        throw new Error(result.message || 'Неизвестная ошибка от сервера');
                     }
                 } catch (error) {
-                    formMessage.textContent = `Ошибка добавления записи: ${error.message}`;
+                    formMessage.textContent = `Ошибка добавления: ${error.message}`;
                     formMessage.className = 'mt-4 text-center text-red-600';
                 } finally {
                     submitButton.disabled = false;
@@ -153,8 +153,8 @@
                 }
             });
 
-            if (SCRIPT_URL === "https://script.google.com/macros/s/AKfycbyveTxpJI7EJnVYqHqs3K_KQHiE5mnN3oy-v6gbXddbEIvk0hk3RQ-s2pJ0NA4xPPtHnw/exec") {
-                 loadingRow.textContent = "Ошибка: Не указана ссылка на веб-приложение Google. Следуйте инструкции.";
+            if (SCRIPT_URL.includes("ВАША_САМАЯ_НОВАЯ_ССЫЛКА")) {
+                 tableBody.innerHTML = `<tr><td colspan="4" class="text-center p-6 text-red-500">Ошибка: Вставьте вашу новую ссылку на веб-приложение Google в HTML-файл.</td></tr>`;
             } else {
                 fetchRecords();
             }
