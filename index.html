@@ -4,320 +4,161 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Журнал Дисциплины</title>
-    
-    <!-- PWA Manifest and Theme -->
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#4A90E2">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="https://placehold.co/192x192/4A90E2/FFFFFF?text=ЖД">
-
-
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
-        .modal { transition: opacity 0.25s ease; }
-        .modal-content { transition: transform 0.25s ease; }
+        .loader {
+            border-top-color: #3498db;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
 
-    <div id="app" class="container mx-auto p-4 sm:p-6 lg:p-8">
-        <header class="mb-8 text-center">
-            <h1 class="text-3xl sm:text-4xl font-bold text-gray-700">Журнал Дисциплины</h1>
-            <p class="text-gray-500 mt-2">Учет нарушений на уроках</p>
+    <div class="container mx-auto p-4 sm:p-6 max-w-4xl">
+        <header class="text-center my-6">
+            <h1 class="text-3xl sm:text-4xl font-bold text-gray-900">Журнал Дисциплины</h1>
+            <p class="text-gray-600 mt-2">Интерактивный журнал на базе Google Sheets</p>
         </header>
 
-        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <div class="flex flex-col sm:flex-row justify-between items-center">
-                <h2 class="text-2xl font-semibold mb-4 sm:mb-0">Список записей</h2>
-                <button id="addRecordBtn" class="w-full sm:w-auto bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow hover:bg-blue-700 transition duration-300 flex items-center justify-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" /></svg>
-                    Добавить запись
+        <!-- Форма добавления записи -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <h2 class="text-2xl font-semibold mb-4">Добавить новую запись</h2>
+            <form id="add-record-form" class="space-y-4">
+                <div>
+                    <label for="student" class="block text-sm font-medium text-gray-700 mb-1">Ученик</label>
+                    <input type="text" id="student" name="student" required class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label for="lesson" class="block text-sm font-medium text-gray-700 mb-1">Урок</label>
+                    <input type="text" id="lesson" name="lesson" required class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label for="violation" class="block text-sm font-medium text-gray-700 mb-1">Действие/Нарушение</label>
+                    <textarea id="violation" name="violation" rows="3" required class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                </div>
+                <button type="submit" id="submit-button" class="w-full flex justify-center items-center bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 rounded-md transition duration-300 disabled:bg-indigo-400">
+                    <span id="submit-button-text">Добавить запись</span>
+                    <div id="submit-button-loader" class="loader h-5 w-5 rounded-full border-2 border-t-2 border-gray-200 hidden ml-2"></div>
                 </button>
+            </form>
+            <div id="form-message" class="mt-4 text-center"></div>
+        </div>
+
+        <!-- Таблица для отображения данных -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <h2 class="text-2xl font-semibold mb-4">Список записей</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ученик</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Урок</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Нарушение</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Дата и время</th>
+                        </tr>
+                    </thead>
+                    <tbody id="records-table-body" class="divide-y divide-gray-200">
+                        <tr>
+                            <td colspan="4" class="text-center p-6 text-gray-500" id="loading-row">
+                                Загрузка данных...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
-
-        <!-- Table for records -->
-        <div class="bg-white rounded-lg shadow-md overflow-x-auto">
-            <table class="w-full text-left">
-                <thead class="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                        <th class="p-4 font-semibold text-sm text-gray-600 uppercase tracking-wider">Ученик</th>
-                        <th class="p-4 font-semibold text-sm text-gray-600 uppercase tracking-wider">Урок</th>
-                        <th class="p-4 font-semibold text-sm text-gray-600 uppercase tracking-wider">Нарушение/Действие</th>
-                        <th class="p-4 font-semibold text-sm text-gray-600 uppercase tracking-wider">Дата и время</th>
-                        <th class="p-4 font-semibold text-sm text-gray-600 uppercase tracking-wider">Действия</th>
-                    </tr>
-                </thead>
-                <tbody id="recordsTableBody" class="divide-y divide-gray-200">
-                    <tr id="loading-row">
-                        <td colspan="5" class="p-8 text-center text-gray-500">Загрузка данных...</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        <div id="auth-info" class="text-center mt-4 text-xs text-gray-400"></div>
     </div>
 
-    <!-- Modal for adding/editing records -->
-    <div id="recordModal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden opacity-0">
-        <div class="modal-content bg-white rounded-lg shadow-2xl w-full max-w-lg p-8 transform -translate-y-10">
-            <h3 id="modalTitle" class="text-2xl font-bold mb-6">Новая запись</h3>
-            <form id="recordForm">
-                <input type="hidden" id="recordId">
-                <div>
-                    <label for="pupilName" class="block text-sm font-medium text-gray-700 mb-1">Ученик</label>
-                    <input type="text" id="pupilName" class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
-                </div>
-                <div class="mt-4">
-                    <label for="lessonName" class="block text-sm font-medium text-gray-700 mb-1">Урок</label>
-                    <input type="text" id="lessonName" class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
-                </div>
-                <div class="mt-4">
-                    <label for="violationDetails" class="block text-sm font-medium text-gray-700 mb-1">Действия / Нарушения</label>
-                    <textarea id="violationDetails" rows="4" class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500" required></textarea>
-                </div>
-                <div class="mt-6 flex justify-end space-x-4">
-                    <button type="button" id="cancelBtn" class="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition duration-300">Отмена</button>
-                    <button type="submit" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow hover:bg-blue-700 transition duration-300">Сохранить</button>
-                </div>
-            </form>
-        </div>
-    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Ваша ссылка была вставлена сюда
+            const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyZV6UZI34qSblcjZlXOxwQanSqQuBlncQI9y3IL6H4OsXapXAyWivOtmf3jz-QPiNzPQ/exec";
 
-    <!-- Firebase -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, addDoc, onSnapshot, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // --- CONFIGURATION ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyBE9rPgouchVLUPxBvuwTq8nXyRW-9fU20",
-            authDomain: "console-3a3ba.firebaseapp.com",
-            projectId: "console-3a3ba",
-            storageBucket: "console-3a3ba.firebasestorage.app",
-            messagingSenderId: "890750611955",
-            appId: "1:890750611955:web:4cb3caf9ef55317124a286",
-            measurementId: "G-V7DK33J8PL"
-        };
-
-        // --- INITIALIZATION ---
-        const app = initializeApp(firebaseConfig);
-        const analytics = getAnalytics(app); // Аналитика подключена
-        const db = getFirestore(app);
-        const auth = getAuth(app);
-        let currentUserId = null;
-        let recordsCollectionRef;
-
-        // --- AUTHENTICATION ---
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                currentUserId = user.uid;
-                document.getElementById('auth-info').innerHTML = `ID для совместной работы: <span class="font-mono bg-gray-200 px-1 rounded">${currentUserId}</span>`;
-                recordsCollectionRef = collection(db, `artifacts/${appId}/public/data/records`);
-                listenForRecords();
-            }
-        });
-
-        (async () => {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (error) {
-                console.error("Authentication failed: ", error);
-            }
-        })();
-
-        // --- DOM ELEMENTS ---
-        const addRecordBtn = document.getElementById('addRecordBtn');
-        const modal = document.getElementById('recordModal');
-        const modalContent = modal.querySelector('.modal-content');
-        const cancelBtn = document.getElementById('cancelBtn');
-        const recordForm = document.getElementById('recordForm');
-        const modalTitle = document.getElementById('modalTitle');
-        const tableBody = document.getElementById('recordsTableBody');
-
-        // --- MODAL LOGIC ---
-        const openModal = () => {
-            modal.classList.remove('hidden');
-            setTimeout(() => {
-                modal.classList.remove('opacity-0');
-                modalContent.classList.remove('-translate-y-10');
-            }, 10);
-        };
-
-        const closeModal = () => {
-            modal.classList.add('opacity-0');
-            modalContent.classList.add('-translate-y-10');
-            setTimeout(() => {
-                modal.classList.add('hidden');
-                recordForm.reset();
-                document.getElementById('recordId').value = '';
-                modalTitle.textContent = 'Новая запись';
-            }, 250);
-        };
-
-        addRecordBtn.addEventListener('click', openModal);
-        cancelBtn.addEventListener('click', closeModal);
-        modal.addEventListener('click', (e) => e.target === modal && closeModal());
-
-        // --- FIRESTORE CRUD ---
-        const listenForRecords = () => {
-            onSnapshot(recordsCollectionRef, (snapshot) => {
-                const records = [];
-                snapshot.forEach((doc) => records.push({ id: doc.id, ...doc.data() }));
-                records.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
-                renderTable(records);
-            });
-        };
-
-        const renderTable = (records) => {
-            tableBody.innerHTML = '';
-            if (records.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-gray-500">Записей пока нет.</td></tr>`;
-                return;
-            }
-            records.forEach(r => {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-gray-50 transition-colors";
-                const date = r.createdAt?.toDate ? r.createdAt.toDate().toLocaleString('ru-RU') : 'N/A';
-                
-                tr.innerHTML = `
-                    <td class="p-4">${r.pupilName || ''}</td>
-                    <td class="p-4">${r.lessonName || ''}</td>
-                    <td class="p-4 whitespace-pre-wrap break-words max-w-xs">${r.violationDetails || ''}</td>
-                    <td class="p-4">${date}</td>
-                    <td class="p-4">
-                        <button data-id="${r.id}" class="edit-btn text-blue-600 hover:text-blue-800 mr-4">Ред.</button>
-                        <button data-id="${r.id}" class="delete-btn text-red-600 hover:text-red-800">Удл.</button>
-                    </td>
-                `;
-                tableBody.appendChild(tr);
-
-                tr.querySelector('.edit-btn').addEventListener('click', () => {
-                    modalTitle.textContent = 'Редактировать запись';
-                    document.getElementById('recordId').value = r.id;
-                    document.getElementById('pupilName').value = r.pupilName;
-                    document.getElementById('lessonName').value = r.lessonName;
-                    document.getElementById('violationDetails').value = r.violationDetails;
-                    openModal();
-                });
-
-                tr.querySelector('.delete-btn').addEventListener('click', async () => {
-                    if (confirm(`Удалить запись для ученика ${r.pupilName}?`)) {
-                        await deleteDoc(doc(recordsCollectionRef, r.id));
+            const form = document.getElementById('add-record-form');
+            const tableBody = document.getElementById('records-table-body');
+            const loadingRow = document.getElementById('loading-row');
+            const submitButton = document.getElementById('submit-button');
+            const submitButtonText = document.getElementById('submit-button-text');
+            const submitButtonLoader = document.getElementById('submit-button-loader');
+            const formMessage = document.getElementById('form-message');
+            
+            async function fetchRecords() {
+                try {
+                    const response = await fetch(SCRIPT_URL);
+                    const data = await response.json();
+                    
+                    tableBody.innerHTML = '';
+                    if (data.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="4" class="text-center p-6 text-gray-500">Записей пока нет.</td></tr>';
+                    } else {
+                        data.reverse().forEach(record => { // reverse() чтобы новые были сверху
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${record.student}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${record.lesson}</td>
+                                <td class="px-6 py-4 whitespace-normal text-sm text-gray-500 break-words">${record.violation}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${record.timestamp}</td>
+                            `;
+                            tableBody.appendChild(tr);
+                        });
                     }
-                });
-            });
-        };
-
-        recordForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const id = document.getElementById('recordId').value;
-            const data = {
-                pupilName: document.getElementById('pupilName').value,
-                lessonName: document.getElementById('lessonName').value,
-                violationDetails: document.getElementById('violationDetails').value,
-            };
-
-            if (id) {
-                await updateDoc(doc(recordsCollectionRef, id), data);
-            } else {
-                data.createdAt = serverTimestamp();
-                await addDoc(recordsCollectionRef, data);
-            }
-            closeModal();
-        });
-    </script>
-    
-    <!-- PWA Service Worker Registration -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js').then(registration => {
-                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                }, err => {
-                    console.log('ServiceWorker registration failed: ', err);
-                });
-            });
-        }
-    </script>
-    <!-- Embedded Service Worker and Manifest -->
-    <script id="sw-script" type="text/javascript-worker">
-        // sw.js
-        const CACHE_NAME = 'discipline-log-cache-v1';
-        const urlsToCache = [
-            '/',
-            '/index.html', // Assuming this file is served as index.html at the root
-             // Add other static assets if any
-        ];
-
-        self.addEventListener('install', event => {
-            event.waitUntil(
-                caches.open(CACHE_NAME).then(cache => {
-                    console.log('Opened cache');
-                    return cache.addAll(urlsToCache);
-                })
-            );
-        });
-
-        self.addEventListener('fetch', event => {
-            event.respondWith(
-                caches.match(event.request).then(response => {
-                    return response || fetch(event.request);
-                })
-            );
-        });
-    </script>
-     <script id="manifest-script" type="application/json">
-        // manifest.json
-        {
-            "name": "Журнал Дисциплины",
-            "short_name": "Дисциплина",
-            "start_url": ".",
-            "display": "standalone",
-            "background_color": "#ffffff",
-            "theme_color": "#4A90E2",
-            "description": "Приложение для учета нарушений дисциплины на уроках.",
-            "icons": [
-                {
-                    "src": "https://placehold.co/192x192/4A90E2/FFFFFF?text=ЖД",
-                    "sizes": "192x192",
-                    "type": "image/png"
-                },
-                {
-                    "src": "https://placehold.co/512x512/4A90E2/FFFFFF?text=ЖД",
-                    "sizes": "512x512",
-                    "type": "image/png"
+                } catch (error) {
+                    loadingRow.parentElement.innerHTML = `<tr><td colspan="4" class="text-center p-6 text-red-500">Ошибка загрузки данных: ${error.message}. Проверьте SCRIPT_URL в коде.</td></tr>`;
                 }
-            ]
-        }
-    </script>
-    <script>
-        // Dynamically create the files from embedded scripts
-        function createBlobFile(scriptId, mimeType) {
-            const scriptContent = document.getElementById(scriptId).textContent;
-            const blob = new Blob([scriptContent], { type: mimeType });
-            return URL.createObjectURL(blob);
-        }
-        
-        // Inject manifest link
-        const manifestUrl = createBlobFile('manifest-script', 'application/json');
-        document.querySelector('link[rel="manifest"]').href = manifestUrl;
-        
-        // Register service worker from blob
-        if ('serviceWorker' in navigator) {
-            const swUrl = createBlobFile('sw-script', 'text/javascript');
-            navigator.serviceWorker.register(swUrl).then(reg => console.log('SW registered from blob!', reg)).catch(err => console.error('SW registration failed:', err));
-        }
-    </script>
+            }
 
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                submitButton.disabled = true;
+                submitButtonText.classList.add('hidden');
+                submitButtonLoader.classList.remove('hidden');
+                formMessage.textContent = '';
+
+                const formData = new FormData(form);
+                const recordData = {
+                    student: formData.get('student'),
+                    lesson: formData.get('lesson'),
+                    violation: formData.get('violation')
+                };
+
+                try {
+                    const response = await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        body: JSON.stringify(recordData),
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    const result = await response.json();
+
+                    if (result.status === 'success') {
+                        form.reset();
+                        formMessage.textContent = 'Запись успешно добавлена!';
+                        formMessage.className = 'mt-4 text-center text-green-600';
+                        fetchRecords();
+                    } else {
+                        throw new Error(result.message || 'Неизвестная ошибка');
+                    }
+                } catch (error) {
+                    formMessage.textContent = `Ошибка добавления записи: ${error.message}`;
+                    formMessage.className = 'mt-4 text-center text-red-600';
+                } finally {
+                    submitButton.disabled = false;
+                    submitButtonText.classList.remove('hidden');
+                    submitButtonLoader.classList.add('hidden');
+                }
+            });
+
+            if (SCRIPT_URL === "ВАША_ССЫЛКА_НА_ВЕБ_ПРИЛОЖЕНИЕ_GOOGLE") {
+                 loadingRow.textContent = "Ошибка: Не указана ссылка на веб-приложение Google. Следуйте инструкции.";
+            } else {
+                fetchRecords();
+            }
+        });
+    </script>
 </body>
 </html>
