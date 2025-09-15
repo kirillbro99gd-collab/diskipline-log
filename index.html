@@ -106,20 +106,6 @@
                     views[viewName].classList.add('active');
                 }
             }
-
-            // ИСПРАВЛЕНО: Добавлена проверка, чтобы избежать ошибки
-            if (SUPABASE_URL === 'https://lcjgfxrfhhzncgpjlyzj.supabase.co' || SUPABASE_ANON_KEY === 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxjamdmeHJmaGh6bmNncGpseXpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5NDA3NjQsImV4cCI6MjA3MzUxNjc2NH0.IOsgSpZsb6oziniW8ywRYWIrLoptXitgjF88JwF6rBM') {
-                showView('auth');
-                const authContainer = document.querySelector('#auth-view .w-full');
-                authContainer.innerHTML = `
-                    <div class="bg-white rounded-xl shadow-lg p-8 text-center">
-                        <h2 class="text-2xl font-bold text-red-600 mb-4">Ошибка Конфигурации</h2>
-                        <p class="text-gray-700">Пожалуйста, откройте файл <code>index.html</code> и замените шаблонные значения <code>ВАШ_PROJECT_URL</code> и <code>ВАШ_ANON_KEY</code> на ваши настоящие ключи из настроек проекта Supabase.</p>
-                    </div>
-                `;
-                views.loading.classList.remove('active');
-                return; // Прерываем выполнение скрипта
-            }
             
             const { createClient } = supabase;
             const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
