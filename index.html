@@ -17,6 +17,13 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+        /* Стили для модального окна */
+        .modal-backdrop {
+            transition: opacity 0.3s ease;
+        }
+        .modal-content {
+            transition: transform 0.3s ease;
+        }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
@@ -60,11 +67,12 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Урок</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Нарушение</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Дата и время</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Действия</th>
                         </tr>
                     </thead>
                     <tbody id="records-table-body" class="divide-y divide-gray-200">
                         <tr>
-                            <td colspan="4" class="text-center p-6 text-gray-500" id="loading-row">Загрузка данных...</td>
+                            <td colspan="5" class="text-center p-6 text-gray-500" id="loading-row">Загрузка данных...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -72,13 +80,22 @@
         </div>
     </div>
 
+    <!-- Модальное окно подтверждения удаления -->
+    <div id="delete-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 modal-backdrop hidden opacity-0">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm mx-4 modal-content transform scale-95">
+            <h3 class="text-lg font-bold text-gray-900">Подтвердите удаление</h3>
+            <p class="mt-2 text-sm text-gray-600">Вы уверены, что хотите удалить эту запись? Отменить это действие будет невозможно.</p>
+            <div class="mt-6 flex justify-end space-x-3">
+                <button id="cancel-delete-btn" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition">Отмена</button>
+                <button id="confirm-delete-btn" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-md transition">Удалить</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // --- НАСТРОЙКА SUPABASE ---
             const SUPABASE_URL = 'https://lcjgfxrfhhzncgpjlyzj.supabase.co';
             const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxjamdmeHJmaGh6bmNncGpseXpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5NDA3NjQsImV4cCI6MjA3MzUxNjc2NH0.IOsgSpZsb6oziniW8ywRYWIrLoptXitgjF88JwF6rBM';
-
-            // ОШИБОЧНАЯ ПРОВЕРКА УДАЛЕНА
 
             const { createClient } = supabase;
             const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -89,21 +106,27 @@
             const submitButton = document.getElementById('submit-button');
             const submitButtonText = document.getElementById('submit-button-text');
             const submitButtonLoader = document.getElementById('submit-button-loader');
-            
+
+            const deleteModal = document.getElementById('delete-modal');
+            const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+            const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+            let recordIdToDelete = null;
+
             async function fetchRecords() {
-                const { data: records, error } = await db
-                    .from('violations') // Название нашей таблицы
+                // ... (код fetchRecords без изменений)
+                 const { data: records, error } = await db
+                    .from('violations')
                     .select('*')
-                    .order('created_at', { ascending: false }); // Сортируем по дате добавления
+                    .order('created_at', { ascending: false });
 
                 if (error) {
-                    tableBody.innerHTML = `<tr><td colspan="4" class="text-center p-6 text-red-500">Ошибка загрузки: ${error.message}</td></tr>`;
+                    tableBody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-red-500">Ошибка загрузки: ${error.message}</td></tr>`;
                     return;
                 }
 
                 tableBody.innerHTML = '';
                 if (records.length === 0) {
-                    tableBody.innerHTML = '<tr><td colspan="4" class="text-center p-6 text-gray-500">Записей пока нет.</td></tr>';
+                    tableBody.innerHTML = '<tr><td colspan="5" class="text-center p-6 text-gray-500">Записей пока нет.</td></tr>';
                 } else {
                     records.forEach(record => {
                         const tr = document.createElement('tr');
@@ -113,6 +136,9 @@
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${record.lesson}</td>
                             <td class="px-6 py-4 whitespace-normal text-sm text-gray-500 break-words">${record.violation}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formattedDate}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <button data-id="${record.id}" class="delete-btn text-red-600 hover:text-red-800 transition">Удалить</button>
+                            </td>
                         `;
                         tableBody.appendChild(tr);
                     });
@@ -121,7 +147,7 @@
 
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                
+                // ... (код обработчика формы без изменений)
                 submitButton.disabled = true;
                 submitButtonText.classList.add('hidden');
                 submitButtonLoader.classList.remove('hidden');
@@ -149,9 +175,60 @@
                 submitButtonText.classList.remove('hidden');
                 submitButtonLoader.classList.add('hidden');
             });
+
+            // Обработчики для модального окна
+            function showModal(id) {
+                recordIdToDelete = id;
+                deleteModal.classList.remove('hidden');
+                setTimeout(() => {
+                    deleteModal.classList.remove('opacity-0');
+                    deleteModal.querySelector('.modal-content').classList.remove('scale-95');
+                }, 10);
+            }
+
+            function hideModal() {
+                deleteModal.classList.add('opacity-0');
+                deleteModal.querySelector('.modal-content').classList.add('scale-95');
+                setTimeout(() => {
+                    deleteModal.classList.add('hidden');
+                    recordIdToDelete = null;
+                }, 300);
+            }
+
+            tableBody.addEventListener('click', (e) => {
+                if (e.target.classList.contains('delete-btn')) {
+                    const id = e.target.dataset.id;
+                    showModal(id);
+                }
+            });
+
+            cancelDeleteBtn.addEventListener('click', hideModal);
+
+            confirmDeleteBtn.addEventListener('click', async () => {
+                if (!recordIdToDelete) return;
+
+                confirmDeleteBtn.disabled = true;
+                confirmDeleteBtn.textContent = 'Удаление...';
+
+                const { error } = await db
+                    .from('violations')
+                    .delete()
+                    .match({ id: recordIdToDelete });
+
+                if (error) {
+                    alert(`Не удалось удалить запись: ${error.message}`);
+                } else {
+                    await fetchRecords();
+                }
+                
+                confirmDeleteBtn.disabled = false;
+                confirmDeleteBtn.textContent = 'Удалить';
+                hideModal();
+            });
             
             fetchRecords();
         });
     </script>
 </body>
 </html>
+
