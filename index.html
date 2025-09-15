@@ -90,27 +90,24 @@
     <!-- Firebase -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, addDoc, onSnapshot, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- CONFIGURATION ---
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'discipline-log-pwa';
-        let firebaseConfig;
-        try {
-            firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-        } catch (e) {
-            console.error("Firebase config is not valid JSON.");
-            return;
-        }
-
-        if (!firebaseConfig) {
-            console.error("Firebase configuration is missing.");
-            document.getElementById('loading-row').querySelector('td').textContent = 'Ошибка конфигурации Firebase.';
-            return;
-        }
+        const firebaseConfig = {
+            apiKey: "AIzaSyBE9rPgouchVLUPxBvuwTq8nXyRW-9fU20",
+            authDomain: "console-3a3ba.firebaseapp.com",
+            projectId: "console-3a3ba",
+            storageBucket: "console-3a3ba.firebasestorage.app",
+            messagingSenderId: "890750611955",
+            appId: "1:890750611955:web:4cb3caf9ef55317124a286",
+            measurementId: "G-V7DK33J8PL"
+        };
 
         // --- INITIALIZATION ---
         const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app); // Аналитика подключена
         const db = getFirestore(app);
         const auth = getAuth(app);
         let currentUserId = null;
