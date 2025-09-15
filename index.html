@@ -1,4 +1,4 @@
-
+<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -97,12 +97,33 @@
         document.addEventListener('DOMContentLoaded', () => {
             const SUPABASE_URL = 'https://lcjgfxrfhhzncgpjlyzj.supabase.co';
             const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxjamdmeHJmaGh6bmNncGpseXpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5NDA3NjQsImV4cCI6MjA3MzUxNjc2NH0.IOsgSpZsb6oziniW8ywRYWIrLoptXitgjF88JwF6rBM';
+
+            const views = { loading: document.getElementById('loading-view'), auth: document.getElementById('auth-view'), app: document.getElementById('app-view') };
+            
+            function showView(viewName) {
+                Object.values(views).forEach(v => v.classList.remove('active'));
+                if (views[viewName]) {
+                    views[viewName].classList.add('active');
+                }
+            }
+
+            // ИСПРАВЛЕНО: Добавлена проверка, чтобы избежать ошибки
+            if (SUPABASE_URL === 'https://lcjgfxrfhhzncgpjlyzj.supabase.co' || SUPABASE_ANON_KEY === 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxjamdmeHJmaGh6bmNncGpseXpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5NDA3NjQsImV4cCI6MjA3MzUxNjc2NH0.IOsgSpZsb6oziniW8ywRYWIrLoptXitgjF88JwF6rBM') {
+                showView('auth');
+                const authContainer = document.querySelector('#auth-view .w-full');
+                authContainer.innerHTML = `
+                    <div class="bg-white rounded-xl shadow-lg p-8 text-center">
+                        <h2 class="text-2xl font-bold text-red-600 mb-4">Ошибка Конфигурации</h2>
+                        <p class="text-gray-700">Пожалуйста, откройте файл <code>index.html</code> и замените шаблонные значения <code>ВАШ_PROJECT_URL</code> и <code>ВАШ_ANON_KEY</code> на ваши настоящие ключи из настроек проекта Supabase.</p>
+                    </div>
+                `;
+                views.loading.classList.remove('active');
+                return; // Прерываем выполнение скрипта
+            }
             
             const { createClient } = supabase;
             const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-            // ... (все DOM элементы остаются такими же)
-            const views = { loading: document.getElementById('loading-view'), auth: document.getElementById('auth-view'), app: document.getElementById('app-view') };
             const loginForm = document.getElementById('login-form');
             const authMessage = document.getElementById('auth-message');
             const logoutButton = document.getElementById('logout-button');
@@ -110,11 +131,6 @@
             const addRecordForm = document.getElementById('add-record-form');
             const tableBody = document.getElementById('records-table-body');
             const formMessage = document.getElementById('form-message');
-
-            function showView(viewName) {
-                Object.values(views).forEach(v => v.classList.remove('active'));
-                views[viewName].classList.add('active');
-            }
 
             async function fetchRecords() {
                  const { data: records, error } = await db.from('violations').select('*').order('created_at', { ascending: false });
@@ -138,6 +154,7 @@
             }
 
             async function getUsername(userId) {
+                if (!userId) return null;
                 const { data, error } = await db.from('profiles').select('username').eq('id', userId).single();
                 return data ? data.username : null;
             }
@@ -145,7 +162,7 @@
             async function handleSession(session) {
                 if (session) {
                     const username = await getUsername(session.user.id);
-                    userInfo.textContent = `Вы вошли как: ${username || session.user.email}`;
+                    userInfo.textContent = `Вы вошли как: ${username || 'Пользователь'}`;
                     await fetchRecords();
                     showView('app');
                 } else {
@@ -162,43 +179,24 @@
                 const password = e.target.password.value;
                 authMessage.textContent = '';
                 
-                // Шаг 1: Найти email по юзернейму
-                // У Supabase нет прямого способа сделать это, поэтому создаем "вызываемую функцию"
-                // Для простоты, мы будем хранить email в таблице profiles и читать его.
-                // Убедитесь, что RLS для profiles разрешает чтение для всех.
-                
-                // Для этого нам понадобится более сложная логика или хранимая процедура в Postgres.
-                // Для упрощения, мы сделаем небезопасный, но рабочий вариант для вашего случая:
-                // Мы будем использовать email как логин, но отображать username
-                authMessage.textContent = 'Вход по имени пользователя временно недоступен. Пожалуйста, используйте Email.';
+                const { data: email, error: rpcError } = await db.rpc('get_email_by_username', {
+                    p_username: username
+                });
 
-                // ПРАВИЛЬНАЯ, НО СЛОЖНАЯ ЛОГИКА, которую пока не реализуем:
-                // 1. Создать хранимую процедуру в Postgres, которая по username находит email.
-                // 2. Вызвать ее с сайта.
-                // 3. Использовать полученный email для входа.
+                if (rpcError || !email) {
+                    authMessage.textContent = 'Пользователь с таким именем не найден.';
+                    return;
+                }
+
+                const { error: signInError } = await db.auth.signInWithPassword({
+                    email: email,
+                    password: password,
+                });
+
+                if (signInError) {
+                    authMessage.textContent = 'Неверный пароль.';
+                }
             });
-
-            // Поскольку логика входа по юзернейму сложна, возвращаем вход по Email,
-            // но оставляем возможность легко это изменить в будущем.
-            // Заменяем обработчик loginForm
-            loginForm.addEventListener('submit', async (e) => {
-                 e.preventDefault();
-                 const emailInput = document.createElement('input'); // Костыль, чтобы не менять HTML
-                 emailInput.value = e.target.username.value; // Используем поле username как email
-                 const password = e.target.password.value;
-                 authMessage.textContent = '';
-
-                 // Хак: Временно просим вводить email в поле username
-                 const { data, error } = await db.auth.signInWithPassword({
-                     email: emailInput.value,
-                     password: password,
-                 });
-
-                 if (error) {
-                     authMessage.textContent = 'Неверный логин или пароль.';
-                 }
-            });
-
 
             logoutButton.addEventListener('click', async () => await db.auth.signOut());
 
@@ -233,4 +231,3 @@
     </script>
 </body>
 </html>
-
